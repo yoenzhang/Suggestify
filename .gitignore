@@ -1,0 +1,17 @@
+### **.gitignore** (Create in the root folder)
+```
+# Ignore raw audio files
+data/raw/
+data/processed/
+data/features.pkl
+
+# Python & System files
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# Logs
+logs/
+*.log
