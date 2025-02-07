@@ -28,6 +28,8 @@ suggestify/
 ```
 
 ## **🚀 Quick Start**
+- Upon obtaining a dataset of audio clips from [FMA](https://github.com/mdeff/fma), run the following commands below
+
 ### **1) Install Dependencies**
 ```sh
 pip install -r requirements.txt
@@ -37,15 +39,14 @@ pip install -r requirements.txt
 ```sh
 python scripts/preprocess.py
 ```
-
-### **3️) Extract Audio Features**
-```sh
-python scripts/feature_extraction.py
-```
-
-### **4️) Build Feature Database**
+### **43) Build Feature Database**
 ```sh
 python scripts/build_database.py
+```
+
+### **4) Extract Audio Features**
+```sh
+python scripts/feature_extraction.py
 ```
 
 ### **5️) Match a New Audio File**
@@ -65,5 +66,6 @@ python app/server.py
 - **Mobile App Support** (React Native)
 
 ## **📌 Notes**
+- Model was trained on ~8GB of song data, 155066 30-sec snippets
 - **Data files (`data/raw/`) are ignored in Git.**
 - **Make sure all audio files are processed before matching.**
