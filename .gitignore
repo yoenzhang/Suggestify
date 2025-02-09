@@ -3,7 +3,6 @@
 # Ignore raw audio files
 data/raw/
 data/processed/
-data/features.pkl
 fma
 
 # Python & System files
