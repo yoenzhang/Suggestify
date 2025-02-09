@@ -1,56 +1,57 @@
 import pickle
 import numpy as np
 import faiss
+import re
 
-# Paths to saved files
-features_path = "data/features.pkl"
+# Path to FAISS index and song names
 faiss_path = "data/faiss_index.pkl"
+song_names_path = "data/faiss_index_names.pkl"
 
-def verify_data():
-    """Verify that features.pkl and faiss_index.pkl contain matching data."""
-    
-    # ✅ Load feature database
-    try:
-        with open(features_path, "rb") as f:
-            feature_db, song_names = pickle.load(f)
-        print(f"✅ Loaded {len(song_names)} songs from {features_path}")
-    except Exception as e:
-        print(f"❌ Error loading {features_path}: {e}")
-        return
+def extract_numeric(filename):
+    """Extract numeric value from filename for proper sorting."""
+    match = re.search(r"(\d+)", filename)
+    return int(match.group(1)) if match else float('inf')
+
+def list_last_50_faiss_songs():
+    """Print total FAISS count and the last 50 songs stored in faiss_index.pkl in sorted order alongside their FAISS vectors."""
 
     # ✅ Load FAISS index
     try:
         index = faiss.read_index(faiss_path)
-        print(f"✅ FAISS Index contains {index.ntotal} songs.")
+        total_songs = index.ntotal
+        print(f"✅ FAISS Index contains {total_songs} songs.")
     except Exception as e:
         print(f"❌ Error loading {faiss_path}: {e}")
         return
 
-    if len(song_names) != index.ntotal:
-        print(f"❌ WARNING: FAISS index count ({index.ntotal}) does not match feature database count ({len(song_names)})!")
+    # ✅ Load song names
+    try:
+        with open(song_names_path, "rb") as f:
+            song_names = pickle.load(f)
+        print(f"✅ Loaded {len(song_names)} song names.")
+    except Exception as e:
+        print(f"❌ Error loading {song_names_path}: {e}")
+        return
 
-    # ✅ Verify first 5 songs
-    print("\n🔍 **Verifying first 5 songs:**\n")
-    for i in range(min(5, len(song_names))):
-        song = song_names[i]
-        feature_vector = feature_db[song].flatten()  # Ensure it is (512,)
+    if len(song_names) != total_songs:
+        print(f"❌ WARNING: FAISS index count ({total_songs}) does not match stored song count ({len(song_names)})!")
 
-        # Retrieve FAISS stored vector with the correct shape
-        faiss_vector = np.zeros((index.d,), dtype=np.float32)  # Ensure shape (512,)
-        index.reconstruct(i, faiss_vector)
+    # ✅ Sort song names numerically
+    sorted_song_names = sorted(song_names, key=extract_numeric)
 
-        print(f"🎵 {i+1}. {song}")
-        print(f"   🔹 Feature Shape (features.pkl): {feature_vector.shape}")
-        print(f"   🔹 Feature Shape (FAISS): {faiss_vector.shape}")
+    # ✅ Extract last 50 songs
+    last_50_songs = sorted_song_names[-50:]
 
-        # Compare vectors using cosine similarity
-        cosine_sim = np.dot(feature_vector, faiss_vector) / (
-            np.linalg.norm(feature_vector) * np.linalg.norm(faiss_vector)
-        )
+    # ✅ Print last 50 songs and their FAISS vectors
+    print("\n🔍 **Last 50 Sorted Songs and Their FAISS Vectors:**\n")
+    for i, song in enumerate(last_50_songs, start=total_songs - 50 + 1):
+        faiss_vector = np.zeros((index.d,), dtype=np.float32)
+        index.reconstruct(i - 1, faiss_vector)  # Retrieve FAISS stored vector
 
-        print(f"   📊 Cosine Similarity: {cosine_sim:.4f}\n")
+        print(f"{i}. {song}")
+        print(f"   🔹 FAISS Vector (first 5 values): {faiss_vector[:5]}\n")
 
-    print("✅ Verification complete!")
+    print("\n✅ FAISS last 50 songs listing complete!")
 
-# Run verification
-verify_data()
+# Run FAISS song listing
+list_last_50_faiss_songs()

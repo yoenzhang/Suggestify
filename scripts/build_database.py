@@ -2,8 +2,11 @@ import os
 import numpy as np
 import torch
 import faiss
+import pickle
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from feature_extraction import extract_features
+
+FAISS_PATH = "data/faiss_index.pkl"
 
 def process_file(file_path):
     try:
@@ -20,40 +23,48 @@ def process_file(file_path):
             print(f"⚠️ Skipping {file_path} - Empty feature vector.")
             return None, None
 
-        # ✅ Log low variance but do not skip
-        mean_value = np.mean(features)
-        variance = np.var(features)
-        if variance < 1e-6:
-            print(f"⚠️ Warning: {file_path} has low variance ({variance:.6f}) but will still be indexed.")
-
-        faiss.normalize_L2(features)  # Normalize for efficient indexing
+        faiss.normalize_L2(features)  # Normalize for FAISS indexing
         return features.astype(np.float32), file_path
 
     except Exception as e:
         print(f"❌ Error processing {file_path}: {e}")
         return None, None
 
-def build_feature_database(folder, batch_size=500, max_workers=2):
+def save_faiss_index(index, song_names):
+    """Save FAISS index and processed song names."""
+    faiss.write_index(index, FAISS_PATH)
+    with open(FAISS_PATH.replace(".pkl", "_names.pkl"), "wb") as f:
+        pickle.dump(song_names, f)
+    print(f"✅ FAISS index saved: {FAISS_PATH}")
+
+def load_faiss_index():
+    """Load FAISS index and processed song names."""
+    if os.path.exists(FAISS_PATH) and os.path.exists(FAISS_PATH.replace(".pkl", "_names.pkl")):
+        index = faiss.read_index(FAISS_PATH)
+        with open(FAISS_PATH.replace(".pkl", "_names.pkl"), "rb") as f:
+            song_names = pickle.load(f)
+        print(f"✅ Resuming from FAISS index: {FAISS_PATH} ({len(song_names)} songs indexed)")
+        return index, set(song_names)
+    else:
+        print(f"⚠️ No existing FAISS index found. Starting fresh.")
+        return faiss.IndexFlatL2(512), set()
+
+def build_feature_database(folder, batch_size=100, max_workers=3):
     """Extract and store deep audio features, ensuring correct FAISS indexing with batch updates."""
-    faiss_path = "data/faiss_index.pkl"
+    index, processed_files = load_faiss_index()
 
-    # ✅ Always start fresh
-    print(f"⚠️ Overwriting existing {faiss_path} to prevent duplicates.")
-    if os.path.exists(faiss_path):
-        os.remove(faiss_path)
-
-    # ✅ Create new FAISS index
-    index = faiss.IndexFlatL2(512)
-    faiss.write_index(index, faiss_path)
-    print(f"✅ Created new FAISS index: {faiss_path}")
-
-    feature_list = []  # Stores features in memory before adding to FAISS
-    song_names = []  # Track processed filenames
+    feature_list = []
+    song_names = list(processed_files)  # Convert set to list for ordering
 
     files = [os.path.join(folder, file) for file in sorted(os.listdir(folder)) if file.endswith(".wav")]
+    files_to_process = [file for file in files if file not in processed_files]
+
+    if not files_to_process:
+        print("✅ All files already indexed. Nothing to process.")
+        return
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(process_file, file) for file in files]
+        futures = {executor.submit(process_file, file): file for file in files_to_process}
 
         for future in as_completed(futures):
             features, file_path = future.result()
@@ -61,22 +72,19 @@ def build_feature_database(folder, batch_size=500, max_workers=2):
                 feature_list.append(features)
                 song_names.append(file_path)
 
-                # ✅ Batch process FAISS every `batch_size` files
                 if len(feature_list) >= batch_size:
                     batch_features = np.vstack(feature_list)
                     index.add(batch_features)
-                    faiss.write_index(index, faiss_path)
-                    print(f"✅ FAISS index updated! Total: {index.ntotal} songs.")
+                    save_faiss_index(index, song_names)
                     feature_list = []  # Reset batch list
 
-    # ✅ Final Save to FAISS
     if len(feature_list) > 0:
         batch_features = np.vstack(feature_list)
         index.add(batch_features)
-        faiss.write_index(index, faiss_path)
-        print(f"✅ Final FAISS index update! Total FAISS songs: {index.ntotal} (Expected: {len(song_names)})")
+        save_faiss_index(index, song_names)
 
+    print(f"✅ Final FAISS index update! Total FAISS songs: {index.ntotal} (Expected: {len(song_names)})")
     print("✅ Database build complete!")
 
 if __name__ == "__main__":
-    build_feature_database("data/processed", batch_size=500, max_workers=2)
+    build_feature_database("data/processed", batch_size=100, max_workers=3)
