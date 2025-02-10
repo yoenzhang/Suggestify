@@ -1,45 +1,68 @@
 import os
-import pickle
 import numpy as np
 import torch
 import faiss
+import pickle
 
 # Detect if GPU is available
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"🔹 Using {device.upper()} for feature extraction and FAISS indexing.")
+print(f"🔹 Using {device.upper()} for FAISS indexing.")
+
+FAISS_INDEX_PATH = "data/faiss_index.pkl"
+SONG_NAMES_PATH = "data/faiss_index_names.pkl"
+
+def load_faiss_index():
+    """Load FAISS index and song names from file."""
+    if not os.path.exists(FAISS_INDEX_PATH) or not os.path.exists(SONG_NAMES_PATH):
+        print("❌ Error: FAISS index or song names file not found.")
+        return None, None
+    
+    index = faiss.read_index(FAISS_INDEX_PATH)
+    
+    # Extract stored song names from the pickle file
+    with open(SONG_NAMES_PATH, "rb") as f:
+        song_names = pickle.load(f)
+    
+    # Check if the index is valid
+    if index.ntotal == 0 or not index.is_trained:
+        print("❌ Error: FAISS index is empty or untrained.")
+        return None, None
+
+    print(f"✅ Loaded FAISS index with {index.ntotal} songs.")
+
+    return index, song_names
 
 def find_similar_songs(query_file, k=5):
     from feature_extraction import extract_features  # Import inside function to avoid circular import
 
-    try:
-        with open("data/features.pkl", "rb") as f:
-            feature_db = pickle.load(f)  # Load the dictionary directly
-    except FileNotFoundError:
-        print("❌ Error: features.pkl file not found.")
-        return []
-    except Exception as e:
-        print(f"❌ Error loading features.pkl: {e}")
+    # Load FAISS index and song names
+    index, song_names = load_faiss_index()
+    if index is None or song_names is None:
         return []
 
-    song_names = list(feature_db.keys())
-    
     try:
-        query_features = extract_features(query_file, model="torchopenl3", device=device).reshape(1, -1).astype(np.float32)
+        query_features = extract_features(query_file, model="torchopenl3").astype(np.float32)
+        query_features = query_features.reshape(1, -1)
     except Exception as e:
         print(f"❌ Error extracting features from query file: {e}")
         return []
 
-    # Convert feature dictionary to numpy array for FAISS indexing
-    feature_matrix = np.vstack(list(feature_db.values())).astype(np.float32)
+    # Normalize query feature for FAISS search
+    faiss.normalize_L2(query_features)
+
+    # Run FAISS search
+    distances, idx = index.search(query_features, k)
+
+    # Retrieve song names and similarity scores
+    results = [(song_names[int(i)], distances[0][j]) for j, i in enumerate(idx[0])]
     
-    # Create FAISS index
-    d = feature_matrix.shape[1]
-    index = faiss.IndexFlatL2(d)
-    index.add(feature_matrix)
-    
-    _, idx = index.search(query_features, k)  # Run FAISS search
-    return [song_names[i] for i in idx[0]]
+    return results  # Returns list of tuples (song_name, similarity_score)
 
 if __name__ == "__main__":
-    matches = find_similar_songs("data/test/4x4.wav", k=5)
-    print(f"Top 5 similar songs: {matches}")
+    # Set environment variable to avoid OpenMP runtime error
+    os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+    matches = find_similar_songs("data/test/drink dont need no mix.wav", k=5)
+    print("🎵 Top 5 similar songs:")
+    for song, score in matches:
+        print(f"  {song} (Similarity Score: {score:.4f})")
