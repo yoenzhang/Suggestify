@@ -1,71 +1,85 @@
-# **Suggestify: AI-Powered Shazam-Like App**
+# **Suggestify: AI-Powered Music Recommendation App**
 
-## **🔹 Overview**
-Suggestify is an AI-powered music identification app that:
-- **Records audio** and converts it into a fingerprint.
-- **Compares it to a database of songs** to find the closest match.
-- **Returns song suggestions** based on similarity.
+## **Overview**
 
-## **📌 Project Structure**
+Suggestify is an AI-powered music recognition and recommendation system that:
+
+- Records audio and converts it into deep audio embeddings.
+- Compares it against a large music database using FAISS indexing.
+- Returns a ranked list of similar songs based on audio similarity.
+
+## **Project Structure**
+
 ```plaintext
 suggestify/
 │── data/                  # Audio dataset
-│   ├── raw/               # Original MP3s/WAVs (ignored in .gitignore)
-│   ├── processed/         # Converted WAVs (16kHz, mono)
-│   ├── features.pkl       # Saved fingerprints (MFCCs)
-│── models/                # ML models (optional)
+│   ├── raw/               # Original MP3/WAV files (ignored in .gitignore)
+│   ├── processed/         # Converted WAV files (16kHz, mono)
+│   ├── features.pkl       # Saved audio embeddings
+│   ├── faiss_index        # FAISS index for fast similarity search
+│── models/                # Machine learning models (to be implemented)
 │── scripts/               # Core functionality
 │   ├── preprocess.py      # Convert audio to WAV
-│   ├── feature_extraction.py # Extract MFCCs
+│   ├── feature_extraction.py # Extract deep embeddings using TorchOpenL3
 │   ├── build_database.py  # Store features in FAISS
-│   ├── match_audio.py     # Find song matches
-│── app/                   # Flask API backend
-│   ├── server.py          # API to handle requests
-│── frontend/              # React Native mobile app
+│   ├── match_audio.py     # Find similar songs
+│── app/                   # Flask API backend (WIP)
+│   ├── server.py          # API for handling requests
+│── frontend/              # React Native mobile app (WIP)
 │── notebooks/             # Jupyter notebooks for testing
 │── requirements.txt       # Dependencies
 │── README.md              # Project documentation
 ```
 
-## **🚀 Quick Start**
-- Upon obtaining a dataset of audio clips from [FMA](https://github.com/mdeff/fma), run the following commands below
+## **Quick Start**
 
-### **1) Install Dependencies**
+1. **Install Dependencies**
+
 ```sh
 pip install -r requirements.txt
 ```
 
-### **2️) Convert MP3s to WAV**
+2. **Convert MP3s to WAV**
+
 ```sh
 python scripts/preprocess.py
 ```
-### **43) Build Feature Database**
-```sh
-python scripts/build_database.py
-```
 
-### **4) Extract Audio Features**
+3. **Extract Audio Features**
+
 ```sh
 python scripts/feature_extraction.py
 ```
 
-### **5️) Match a New Audio File**
+4. **Build Feature Database**
+
+```sh
+python scripts/build_database.py
+```
+
+5. **Match a New Audio File**
+
 ```sh
 python scripts/match_audio.py
 ```
 
-### **6️) Run API Server**
+6. **Run API Server**
+
+** Work in progress **
+
 ```sh
 python app/server.py
 ```
 
-## **📌 Features**
-- **Fast Music Matching** using FAISS indexing
-- **Lightweight Audio Fingerprints** with MFCCs
-- **REST API Backend** for easy mobile app integration
-- **Mobile App Support** (React Native)
+## **Features**
 
-## **📌 Notes**
-- Model was trained on ~8GB of song data, 155066 30-sec snippets
-- **Data files (`data/raw/`) are ignored in Git.**
-- **Make sure all audio files are processed before matching.**
+- Fast audio matching using FAISS indexing.
+- Deep audio embeddings with TorchOpenL3.
+- REST API backend for mobile integration.
+- Scalable for large music datasets.
+
+## **Notes**
+
+- The model is trained on approximately 8GB of music data containing 8000 30-second snippets.
+- Data files in `data/raw/` are ignored in Git. However, I have uploaded my .pkl files for quick runs upon pulling.
+- Ensure all audio files are processed before running similarity matching.

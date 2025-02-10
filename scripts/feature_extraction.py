@@ -19,8 +19,8 @@ def extract_torchopenl3_features(file_path):
         if sr != 48000:
             audio = librosa.resample(audio, orig_sr=sr, target_sr=48000, res_type='kaiser_best')
         
-        # Ensure valid audio length
-        if len(audio) < 1000:  # Arbitrary threshold to avoid too-short clips
+        # Ensure valid audio length, arbitrary threshold to avoid too-short clips
+        if len(audio) < 1000:
             print(f"⚠️ Skipping {file_path} - Too short for meaningful features.")
             return np.zeros((1, 512), dtype=np.float32)  # Dummy feature vector
         
@@ -28,13 +28,14 @@ def extract_torchopenl3_features(file_path):
         embedding, timestamps = torchopenl3.get_audio_embedding(audio, sr, model=MODEL, hop_size=1)
         
         # Debugging: Print raw shape
-        print(f"🔍 Raw extracted feature shape before reshaping: {embedding.shape}")
+        # print(f"Raw shape: {embedding.shape}")
         
         # Ensure correct FAISS shape
-        features = torch.mean(embedding, dim=1).cpu().numpy().reshape(1, -1).reshape(1, -1)  # Take mean to get a fixed (1, 512) shape
+        # Take mean to get a fixed (1, 512) shape
+        features = torch.mean(embedding, dim=1).cpu().numpy().reshape(1, -1).reshape(1, -1)
         return features
     except Exception as e:
-        print(f"❌ Error processing {file_path}: {e}")
+        print(f"Error processing {file_path}: {e}")
         return np.zeros((1, 512), dtype=np.float32)  # Return dummy vector on failure
 
 def extract_features(file_path, model="torchopenl3"):
@@ -48,21 +49,21 @@ def save_features(features_dict, output_file="data/features.pkl"):
     """Save extracted features to a file."""
     with open(output_file, "wb") as f:
         pickle.dump(features_dict, f)
-    print(f"✅ Features saved to {output_file}")
+    print(f"Features saved to {output_file}")
 
 if __name__ == "__main__":
     processed_folder = "data/processed"
     features_dict = {}
     
     if not os.path.exists(processed_folder):
-        print(f"❌ ERROR: Processed folder not found: {processed_folder}")
+        print(f"ERROR: Processed folder not found: {processed_folder}")
     else:
         for file in sorted(os.listdir(processed_folder)):
             if file.endswith(".wav"):
                 file_path = os.path.join(processed_folder, file)
                 features = extract_features(file_path, model="torchopenl3")
                 features_dict[file] = features
-                print(f"✅ Extracted Features Shape for {file}: {features.shape}")
+                print(f"Extracted Features Shape for {file}: {features.shape}")
         
         # Save all extracted features
             save_features(features_dict)

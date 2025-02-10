@@ -17,17 +17,18 @@ def process_file(file_path):
             return None, None
 
         if features.ndim == 1:
-            features = features.reshape(1, -1)  # Ensure correct shape
+            features = features.reshape(1, -1)
 
         if features.shape[1] == 0:
             print(f"⚠️ Skipping {file_path} - Empty feature vector.")
             return None, None
 
-        faiss.normalize_L2(features)  # Normalize for FAISS indexing
+        # Normalize for FAISS indexing
+        faiss.normalize_L2(features)
         return features.astype(np.float32), file_path
 
     except Exception as e:
-        print(f"❌ Error processing {file_path}: {e}")
+        print(f"Error processing {file_path}: {e}")
         return None, None
 
 def save_faiss_index(index, song_names):
@@ -43,7 +44,7 @@ def load_faiss_index():
         index = faiss.read_index(FAISS_PATH)
         with open(FAISS_PATH.replace(".pkl", "_names.pkl"), "rb") as f:
             song_names = pickle.load(f)
-        print(f"✅ Resuming from FAISS index: {FAISS_PATH} ({len(song_names)} songs indexed)")
+        print(f"Resuming from FAISS index: {FAISS_PATH} ({len(song_names)} songs indexed)")
         return index, set(song_names)
     else:
         print(f"⚠️ No existing FAISS index found. Starting fresh.")
@@ -54,13 +55,15 @@ def build_feature_database(folder, batch_size=100, max_workers=3):
     index, processed_files = load_faiss_index()
 
     feature_list = []
-    song_names = list(processed_files)  # Convert set to list for ordering
+
+    # Convert set to list for ordering
+    song_names = list(processed_files)
 
     files = [os.path.join(folder, file) for file in sorted(os.listdir(folder)) if file.endswith(".wav")]
     files_to_process = [file for file in files if file not in processed_files]
 
     if not files_to_process:
-        print("✅ All files already indexed. Nothing to process.")
+        print("All files already indexed. Nothing to process.")
         return
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -83,8 +86,7 @@ def build_feature_database(folder, batch_size=100, max_workers=3):
         index.add(batch_features)
         save_faiss_index(index, song_names)
 
-    print(f"✅ Final FAISS index update! Total FAISS songs: {index.ntotal} (Expected: {len(song_names)})")
-    print("✅ Database build complete!")
+    print(f"Final FAISS index update! Total FAISS songs: {index.ntotal} (Expected: {len(song_names)})")
 
 if __name__ == "__main__":
     build_feature_database("data/processed", batch_size=100, max_workers=3)

@@ -3,10 +3,7 @@ import numpy as np
 import torch
 import faiss
 import pickle
-
-# Detect if GPU is available
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"🔹 Using {device.upper()} for FAISS indexing.")
+from feature_extraction import extract_features
 
 FAISS_INDEX_PATH = "data/faiss_index.pkl"
 SONG_NAMES_PATH = "data/faiss_index_names.pkl"
@@ -14,7 +11,7 @@ SONG_NAMES_PATH = "data/faiss_index_names.pkl"
 def load_faiss_index():
     """Load FAISS index and song names from file."""
     if not os.path.exists(FAISS_INDEX_PATH) or not os.path.exists(SONG_NAMES_PATH):
-        print("❌ Error: FAISS index or song names file not found.")
+        print("Error: FAISS index or song names file not found.")
         return None, None
     
     index = faiss.read_index(FAISS_INDEX_PATH)
@@ -25,16 +22,14 @@ def load_faiss_index():
     
     # Check if the index is valid
     if index.ntotal == 0 or not index.is_trained:
-        print("❌ Error: FAISS index is empty or untrained.")
+        print("Error: FAISS index is empty or untrained.")
         return None, None
 
-    print(f"✅ Loaded FAISS index with {index.ntotal} songs.")
+    print(f"Loaded FAISS index with {index.ntotal} songs.")
 
     return index, song_names
 
-def find_similar_songs(query_file, k=5):
-    from feature_extraction import extract_features  # Import inside function to avoid circular import
-
+def find_similar_songs(query_file, k=5): 
     # Load FAISS index and song names
     index, song_names = load_faiss_index()
     if index is None or song_names is None:
@@ -44,7 +39,7 @@ def find_similar_songs(query_file, k=5):
         query_features = extract_features(query_file, model="torchopenl3").astype(np.float32)
         query_features = query_features.reshape(1, -1)
     except Exception as e:
-        print(f"❌ Error extracting features from query file: {e}")
+        print(f"Error extracting features from query file: {e}")
         return []
 
     # Normalize query feature for FAISS search
@@ -56,7 +51,7 @@ def find_similar_songs(query_file, k=5):
     # Retrieve song names and similarity scores
     results = [(song_names[int(i)], distances[0][j]) for j, i in enumerate(idx[0])]
     
-    return results  # Returns list of tuples (song_name, similarity_score)
+    return results
 
 if __name__ == "__main__":
     # Set environment variable to avoid OpenMP runtime error

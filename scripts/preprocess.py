@@ -15,7 +15,7 @@ def convert_to_wav(input_folder, output_folder):
     output_folder = os.path.join(PROJECT_ROOT, output_folder)  # Ensure absolute path
 
     if not os.path.exists(input_folder):
-        print(f"❌ ERROR: Input folder does not exist: {input_folder}")
+        print(f"ERROR: Input folder does not exist: {input_folder}")
         return
 
     os.makedirs(output_folder, exist_ok=True)
@@ -27,7 +27,7 @@ def convert_to_wav(input_folder, output_folder):
 
                 # Check if file exists
                 if not os.path.exists(input_path):
-                    print(f"❌ ERROR: File not found - {input_path}")
+                    print(f"ERROR: File not found - {input_path}")
                     continue
                 
                 print(f"Processing: {input_path}")
@@ -43,7 +43,7 @@ def convert_to_wav(input_folder, output_folder):
                     audio.export(output_path, format="wav", parameters=["-acodec", "pcm_s16le"])
 
                 except Exception as e:
-                    print(f"❌ Error processing {input_path}: {e}")
+                    print(f"Error processing {input_path}: {e}")
 
 # Run preprocessing for the entire dataset
 convert_to_wav("data/raw/fma_small", "data/processed")

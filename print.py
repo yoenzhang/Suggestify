@@ -15,34 +15,34 @@ def extract_numeric(filename):
 def list_last_50_faiss_songs():
     """Print total FAISS count and the last 50 songs stored in faiss_index.pkl in sorted order alongside their FAISS vectors."""
 
-    # ✅ Load FAISS index
+    # Load FAISS index
     try:
         index = faiss.read_index(faiss_path)
         total_songs = index.ntotal
-        print(f"✅ FAISS Index contains {total_songs} songs.")
+        print(f"FAISS Index contains {total_songs} songs.")
     except Exception as e:
-        print(f"❌ Error loading {faiss_path}: {e}")
+        print(f"Error loading {faiss_path}: {e}")
         return
 
-    # ✅ Load song names
+    # Load song names
     try:
         with open(song_names_path, "rb") as f:
             song_names = pickle.load(f)
-        print(f"✅ Loaded {len(song_names)} song names.")
+        print(f"Loaded {len(song_names)} song names.")
     except Exception as e:
-        print(f"❌ Error loading {song_names_path}: {e}")
+        print(f"Error loading {song_names_path}: {e}")
         return
 
     if len(song_names) != total_songs:
-        print(f"❌ WARNING: FAISS index count ({total_songs}) does not match stored song count ({len(song_names)})!")
+        print(f"WARNING: FAISS index count ({total_songs}) does not match stored song count ({len(song_names)})!")
 
-    # ✅ Sort song names numerically
+    # Sort song names numerically
     sorted_song_names = sorted(song_names, key=extract_numeric)
 
-    # ✅ Extract last 50 songs
+    # Extract last 50 songs
     last_50_songs = sorted_song_names[-50:]
 
-    # ✅ Print last 50 songs and their FAISS vectors
+    # Print last 50 songs and their FAISS vectors
     print("\n🔍 **Last 50 Sorted Songs and Their FAISS Vectors:**\n")
     for i, song in enumerate(last_50_songs, start=total_songs - 50 + 1):
         faiss_vector = np.zeros((index.d,), dtype=np.float32)
@@ -50,8 +50,6 @@ def list_last_50_faiss_songs():
 
         print(f"{i}. {song}")
         print(f"   🔹 FAISS Vector (first 5 values): {faiss_vector[:5]}\n")
-
-    print("\n✅ FAISS last 50 songs listing complete!")
 
 # Run FAISS song listing
 list_last_50_faiss_songs()
